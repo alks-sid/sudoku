@@ -1,4 +1,6 @@
 import random
+import tkinter as tk
+from tkinter import messagebox
 
 class Sudoku:
 
@@ -110,6 +112,110 @@ class Sudoku:
             return self.difficulter()
 
 
-jeu = Sudoku()
-grille = jeu.difficulter()
-jeu.jouer(grille)
+#jeu = Sudoku()
+#grille = jeu.difficulter()
+#jeu.jouer(grille)
+
+
+class InterfaceSudoku:
+    def __init__(self, fenetre):
+        self.jeu = Sudoku()
+        self.grille = None
+        self.selection = None
+        self.fenetre = fenetre
+        self.taille_case = 50
+
+        self.frame_menu = tk.Frame(fenetre)
+        self.frame_menu.pack()
+
+        tk.Button(self.frame_menu, text="Facile",    command=lambda: self.demarrer("facile")).pack()
+        tk.Button(self.frame_menu, text="Moyen",     command=lambda: self.demarrer("moyen")).pack()
+        tk.Button(self.frame_menu, text="Difficile", command=lambda: self.demarrer("difficile")).pack()
+
+    def demarrer(self, niveau):
+        if niveau == "facile":
+            self.grille = self.jeu.facile()
+        elif niveau == "moyen":
+            self.grille = self.jeu.moyen()
+        elif niveau == "difficile":
+            self.grille = self.jeu.difficile()
+
+        self.frame_menu.pack_forget()
+        self.canvas = tk.Canvas(self.fenetre, width=self.taille_case*9, height=self.taille_case*9)
+        self.canvas.pack()
+        self.canvas.bind("<Button-1>", self.clic)
+        self.fenetre.bind("<Key>", self.clavier)
+        self.draw()
+
+    def draw(self):
+        self.canvas.delete("all")
+        self.dessiner_selection()
+        self.dessiner_chiffres()
+        self.dessiner_lignes()
+
+    def dessiner_chiffres(self):
+        for i in range(9):
+            for j in range(9):
+                valeur = self.grille[i][j]
+                x = j * self.taille_case + self.taille_case // 2
+                y = i * self.taille_case + self.taille_case // 2
+
+                if self.jeu.grille_depart[i][j] != 0:
+                    couleur = "black"
+                else:
+                    couleur = "blue"
+                
+                if valeur != 0:
+                    self.canvas.create_text(x, y, text=str(valeur), fill=couleur)
+    
+    def dessiner_lignes(self):
+        taille_totale = self.taille_case*9
+
+        for i in range(10):
+            epaisseur = 3 if i%3 == 0 else 1
+            self.canvas.create_line(0, i*self.taille_case, taille_totale, i*self.taille_case, width=epaisseur)
+            self.canvas.create_line(i*self.taille_case, 0, i*self.taille_case, taille_totale, width=epaisseur)
+    
+    def clic(self, event):
+        colone = event.x // self.taille_case
+        ligne = event.y // self.taille_case
+        self.selection = (ligne, colone)
+        self.draw()
+    
+    def dessiner_selection(self):
+        if self.selection is None:
+            return
+        ligne, colone = self.selection
+        x1 = colone * self.taille_case
+        y1 = ligne * self.taille_case
+        x2 = x1 + self.taille_case
+        y2 = y1 + self.taille_case
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="lightblue", outline="")
+
+    def clavier(self, event):
+        if self.selection is None:
+            return
+        ligne, colone = self.selection
+
+        if not self.jeu.case_modifiable(ligne, colone):
+            return
+        
+        if event.char in "1123456789":
+            self.grille[ligne][colone] = int(event.char)
+        elif event.keysym in ("BackSpace", "Delete", "0"):
+            self.grille[ligne][colone] = 0
+        
+        self.draw()
+        self.verifier_victoire()
+
+    def verifier_victoire(self):
+        if 0 not in [val for ligne in self.grille for val in ligne]:
+            tk.messagebox.showinfo("Vous avez resolu le sudoku !")
+
+
+
+fenetre = tk.Tk()
+fenetre.title("Sudoku")
+fenetre.geometry("1080x720")
+app = InterfaceSudoku(fenetre)
+fenetre.mainloop()
